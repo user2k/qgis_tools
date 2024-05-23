@@ -18,33 +18,30 @@
 
 DESCRIPTION
 
-    Biblioteka do pracy z qgisem, zawiera funkcje do obracania linii, ³¹czenia linii, okreœlania stycznoœci linii
-    Wymaga zainstalowanego qgis w systemie, œcie¿ek wyszukiwania w vs do bibliotek pythona w qgisie
+    Biblioteka do pracy z qgisem, zawiera funkcje do obracania linii, Å‚Ä…czenia linii, okreÅ›lania stycznoÅ›ci linii
+    Wymaga zainstalowanego qgis w systemie, Å›cieÅ¼ek wyszukiwania w vs do bibliotek pythona w qgisie
     Funkcje przerabiaja upierdliwe QgsGeometry na bardziej przyjazne QgsLineString
     
-    Specjalne podziekowania dla copilota za 100 b³êdów w kodzie, ale i nieocenion¹ pomoc w pisaniu :)
+    Specjalne podziekowania dla copilota za 1000 bÅ‚Ä™dÃ³w w kodzie, ale i nieocenionÄ… pomoc w pisaniu :)
     
 """
 # qgis_works.py
 
-#importujemy bibliotekê qgis
-from re import L
+#importujemy bibliotekÄ™ qgis
+
 from qgis.core import *
-from qgis.gui import *
-from qgis.utils import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-import sys
 
 #tworzymy line3d
 
-#subclass dla vertexAt ¿eby przyjmowa³ 1 argument int i wykonuje vertexAt(QgsVertexId(1,1,argument))
-#przyjmujemy ¿e wszystkie obiekty s¹ 1 czeœciowe
+#subclass dla vertexAt Å¼eby przyjmowaÅ‚ 1 argument int i wykonuje vertexAt(QgsVertexId(1,1,argument))
+#przyjmujemy Å¼e wszystkie obiekty sÄ… 1 czeÅ›ciowe
 
 class QgsLineString(QgsLineString):
     def vertexAt(self, i):
         return super().vertexAt(QgsVertexId(1,1,i))
+
+    def deleteVertex(self, i) -> bool:
+        return super().deleteVertex(QgsVertexId(1,1,i))
 
 class qgis_tools:
     
@@ -52,7 +49,7 @@ class qgis_tools:
     def __init__(self):
         pass
     
-    #obracanie linii linia musi byæ QgsLineString lub QgsGeometry
+    #obracanie linii linia musi byÄ‡ QgsLineString lub QgsGeometry
     
     def obroc_linie(self, line):
         geomtype = False
@@ -63,7 +60,7 @@ class qgis_tools:
             line = line2
             geomtype = True
 
-        # jezeli line to nie jest QgsLineString to zwróæ b³¹d
+        # jezeli line to nie jest QgsLineString to zwrÃ³Ä‡ bÅ‚Ä…d
         if type(line).__name__ != 'QgsLineString':
             return 'Error: nie moge stworzyc linestring' 
         
@@ -71,13 +68,13 @@ class qgis_tools:
 
         for i in range(line.vertexCount()):
             line2.addVertex(line.vertexAt(line.vertexCount()-i-1))
-            
+        # jeÅ¼eli line to qgsgeometry to zamien na QgsGeometry
         if geomtype:
             return QgsGeometry.fromWkt(line2.asWkt())
         return line2
 
     def gdzie_styczne(self, line1 :QgsLineString, line2 :QgsLineString, bufl :float):
-        # funkcja zwraca PP PK KP KK w zale¿noœci od tego gdzie linie sie stykaj¹ w odlegloœci bufora bufl
+        # funkcja zwraca PP PK KP KK w zaleÅ¼noÅ›ci od tego gdzie linie sie stykajÄ… w odlegloÅ›ci bufora bufl
         
         output = ''
 
@@ -87,47 +84,84 @@ class qgis_tools:
         if type(line2).__name__ == 'QgsGeometry':
             line2 = QgsLineString().fromWkt(line2.asWkt())
         
-        # jezeli line to nie jest QgsLineString to zwróæ b³¹d
+        # jezeli line to nie jest QgsLineString to zwrÃ³Ä‡ bÅ‚Ä…d
         if type(line1).__name__ != 'QgsLineString' or type(line2).__name__ != 'QgsLineString':
             return 'Error: nie moge stworzyc linestring' 
         
-        if line1.vertexAt(0).distance(line2.vertexAt(0)) < bufl:
+        print(line1.vertexAt(0).distance(line2.vertexAt(0)))
+        print(line1.vertexAt(0).distance(line2.vertexAt(line2.vertexCount()-1)))
+        print(line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(0)))
+        print(line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(line2.vertexCount()-1)))
+        
+        if line1.vertexAt(0).distance(line2.vertexAt(0)) <= bufl:
             output = output + 'PP'
-        elif line1.vertexAt(0).distance(line2.vertexAt(line2.vertexCount()-1)) < bufl:
+        elif line1.vertexAt(0).distance(line2.vertexAt(line2.vertexCount()-1)) <= bufl:
             output = output + 'PK'
-        elif line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(0)) < bufl:
+        elif line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(0)) <= bufl:
             output = output + 'KP'
-        elif line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(line2.vertexCount()-1)) < bufl:
+        elif line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(line2.vertexCount()-1)) <= bufl:
             output = output + 'KK'
-        print(output)
-        # je¿eli d³ugoœæ output nie równa siê 2 to zwróæ b³¹d
+        # jeÅ¼eli dÅ‚ugoÅ›Ä‡ output nie rÃ³wna siÄ™ 2 to zwrÃ³Ä‡ bÅ‚Ä…d
         if len(output) != 2:
+            print(output)
             return 'Error: nie moge okreslic stycznosci'
         return output
 
     def polacz_linie(self, line1 :QgsLineString, line2 :QgsLineString, bufl :float):
-        # funkcja zwraca polaczenie linii w zale¿noœci od tego gdzie linie sie stykaj¹ w odlegloœci bufora bufl
+        # funkcja zwraca polaczenie linii w zaleÅ¼noÅ›ci od tego gdzie linie sie stykajÄ… w odlegloÅ›ci bufora bufl
         
-        output = QgsLineString()
-
+        geomtype = False
         # jezeli line to qgsgeometry to zamien na QgsLineString
         if type(line1).__name__ == 'QgsGeometry':
             line1 = QgsLineString().fromWkt(line1.asWkt())
+            geomtype = True
         if type(line2).__name__ == 'QgsGeometry':
             line2 = QgsLineString().fromWkt(line2.asWkt())
         
-        # jezeli line to nie jest QgsLineString to zwróæ b³¹d
+        # jezeli line to nie jest QgsLineString to zwrÃ³Ä‡ bÅ‚Ä…d
         if type(line1).__name__ != 'QgsLineString' or type(line2).__name__ != 'QgsLineString':
             return 'Error: nie moge stworzyc linestring' 
         
         styczne = self.gdzie_styczne(line1, line2, bufl)
-        # je¿eli retval zawiera Error to zwróæ b³¹d
+        # jeÅ¼eli retval zawiera Error to zwrÃ³Ä‡ bÅ‚Ä…d
         if 'Error' in styczne:
             return styczne
-        
-        if styczne == 'PP':
-            
 
+        if styczne == 'PP':
+            # obracamy line2
+            line1 = self.obroc_linie(line1)
+        elif styczne == 'PK':
+            # obracamy line1 i line2
+            print('obracam obie linie')
+            line1 = self.obroc_linie(line1)
+            line2 = self.obroc_linie(line2)
+            print(line1.asWkt())
+            print(line2.asWkt())
+            
+        elif styczne == 'KP':
+            # wszystko ok
+            pass
+        elif styczne == 'KK':
+            # obracamy line2
+            line2 = self.obroc_linie(line2)
+        
+        # pobieramy ostatni punkt z line1 i pierwszy z line2
+        l1k = line1.vertexAt(line1.vertexCount()-1)
+        l2p = line2.vertexAt(0)
+            
+        # porÃ³wnujemy czy punkty sÄ… dokÅ‚adnie takie same
+        if l1k.x() == l2p.x() and l1k.y() == l2p.y():
+            # dodajemy bez 1 punktu z line2
+            for i in range(1, line2.vertexCount()):
+                line1.addVertex(line2.vertexAt(i))
+            # dodajemy wszystkie punkty z line2
+        else:
+            for i in range(line2.vertexCount()):
+                line1.addVertex(line2.vertexAt(i))
+            
+        # jeÅ¼eli line1 to qgsgeometry to zamien na QgsGeometry
+        if geomtype:
+            return QgsGeometry.fromWkt(line1.asWkt())
         return line1
 
     def __del__(self):
@@ -138,23 +172,22 @@ qt = qgis_tools()
 # tworzymy sample line1
 
 
-#tworzymy sample line2 zlo¿ona z 3 punktów w 1 linii kodu
-line1 = QgsLineString([QgsPoint(10,10,0), QgsPoint(20,20,0), QgsPoint(30,30,0)])
-line2 = QgsLineString([QgsPoint(50,50,0), QgsPoint(40,40,0), QgsPoint(10,10,0)])
+#tworzymy sample line2 zloÅ¼ona z 3 punktÃ³w
+line2 = QgsLineString([QgsPoint(10,9,0),  QgsPoint(30,30,0)])
+line1 = QgsLineString([QgsPoint(50,50,0), QgsPoint(10,9,0)])
 
 print(line1.asWkt())
 print(line2.asWkt())
+print(qt.gdzie_styczne(line1, line2, 1.1))
 
-print(qt.gdzie_styczne(line1, line2, 0.1))
-print(qt.polacz_linie(line1,line2,0.1).asWkt())
+rv = qt.polacz_linie(line1,line2,1.1)
+#jeÅ¼eli zwrÃ³ci Error to wypisz bÅ‚Ä…d
+if 'Error' in rv:
+    print(rv)
+else:
+    print(rv.asWkt())
 
 #create sample qgsgeometry object
 #qgsgeom = QgsGeometry.fromWkt(line1.asWkt())
 #print(qgsgeom.asWkt())
 #print(qt.obroc_linie(qgsgeom).asWkt())
-
-
-
-
-
-
