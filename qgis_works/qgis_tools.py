@@ -88,11 +88,6 @@ class qgis_tools:
         if type(line1).__name__ != 'QgsLineString' or type(line2).__name__ != 'QgsLineString':
             return 'Error: nie moge stworzyc linestring' 
         
-        print(line1.vertexAt(0).distance(line2.vertexAt(0)))
-        print(line1.vertexAt(0).distance(line2.vertexAt(line2.vertexCount()-1)))
-        print(line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(0)))
-        print(line1.vertexAt(line1.vertexCount()-1).distance(line2.vertexAt(line2.vertexCount()-1)))
-        
         if line1.vertexAt(0).distance(line2.vertexAt(0)) <= bufl:
             output = output + 'PP'
         elif line1.vertexAt(0).distance(line2.vertexAt(line2.vertexCount()-1)) <= bufl:
@@ -103,7 +98,6 @@ class qgis_tools:
             output = output + 'KK'
         # jeżeli długość output nie równa się 2 to zwróć błąd
         if len(output) != 2:
-            print(output)
             return 'Error: nie moge okreslic stycznosci'
         return output
 
@@ -132,11 +126,8 @@ class qgis_tools:
             line1 = self.obroc_linie(line1)
         elif styczne == 'PK':
             # obracamy line1 i line2
-            print('obracam obie linie')
             line1 = self.obroc_linie(line1)
             line2 = self.obroc_linie(line2)
-            print(line1.asWkt())
-            print(line2.asWkt())
             
         elif styczne == 'KP':
             # wszystko ok
@@ -169,16 +160,9 @@ class qgis_tools:
 
 qt = qgis_tools()
 
-# tworzymy sample line1
-
-
-#tworzymy sample line2 zlożona z 3 punktów
-line2 = QgsLineString([QgsPoint(10,9,0),  QgsPoint(30,30,0)])
-line1 = QgsLineString([QgsPoint(50,50,0), QgsPoint(10,9,0)])
-
-print(line1.asWkt())
-print(line2.asWkt())
-print(qt.gdzie_styczne(line1, line2, 1.1))
+#tworzymy sample lines
+line1 = QgsLineString([QgsPoint(10,9,0),  QgsPoint(30,30,0)])
+line2 = QgsLineString([QgsPoint(50,50,0), QgsPoint(10,9,0)])
 
 rv = qt.polacz_linie(line1,line2,1.1)
 #jeżeli zwróci Error to wypisz błąd
