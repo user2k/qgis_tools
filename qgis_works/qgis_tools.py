@@ -156,6 +156,9 @@ class qgis_tools:
                     if d == 0:
                         continue
                     # obliczamy u - współczynnik na wektorze
+                    # czyli odleglosc punktu od p1
+                    # podzielona przez dlugosc wektora
+                    
                     u = ((p3.x()-p1.x())*(p2.x()-p1.x())+(p3.y()-p1.y())*(p2.y()-p1.y()))/(d*d)
                     # mniej niz 0 czyli przed wektorem
                     if u < 0:
@@ -174,7 +177,12 @@ class qgis_tools:
                         # obliczamy punkt na linii
                         x = p1.x() + u*(p2.x()-p1.x())
                         y = p1.y() + u*(p2.y()-p1.y())
-                        pw = QgsGeometry.fromWkt('POINT('+str(x)+' '+str(y)+' 0)')
+                        # sprawdzamy ile zmiennych ma punkt
+                        if p1.is3D():
+                            z = p1.z() + u*(p2.z()-p1.z())
+                            pw = QgsGeometry.fromWkt('POINT('+str(x)+' '+str(y)+' 0)')
+                        else:
+                            pw = QgsGeometry.fromWkt('POINT('+str(x)+' '+str(y)+')')
                         if pw.vertexAt(0).distance(p3) <= tol and (pdist == -1 or pdist > pw.vertexAt(0).distance(p3)):
                             # typujemy punkt na linii
                             pwin = pw
@@ -207,7 +215,7 @@ print('nearest point on geom to point = ' + pt1.asWkt())
 pt2 = qt.nearest_point_on_line(geom,point,0.5,True)
 print('nearest point on geom to point = ' + pt2.asWkt())
 
-
+print(QgsGeometry().isNull())
 
 
 
