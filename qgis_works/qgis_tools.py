@@ -45,7 +45,7 @@ class qgis_tools:
         
         # sprawdz czy tym geometrii to linia
         if line.type() != QgsWkbTypes.LineGeometry:
-            return 'Error: nie jest to geometria liniowa'
+            return 0
         # tworzymy nową geometrię typu linia
         new_line = QgsGeometry(line)
         # odwracamy linie
@@ -54,13 +54,13 @@ class qgis_tools:
         return new_line
 
     # funkcja sprawdza czy linie dotykają się na poczatku lub koncu i zwraca SE SS ES EE
-    
+   
     def touch_lines(self, line1:QgsGeometry, line2:QgsGeometry, tol:float):
         
         # sprawdz czy tym geometrii to linia
         touching = ''
         if line1.type() != QgsWkbTypes.LineGeometry or line2.type() != QgsWkbTypes.LineGeometry:
-            return 'Error: nie jest to geometria liniowa'
+            return 0
         # sprawdz czy linie mają punkty początkowe i końcowe w odległości mniejszej niż buf
         if line1.vertexAt(0).distance(line2.vertexAt(0)) <= tol:
             touching = touching + 'SS'
@@ -72,9 +72,9 @@ class qgis_tools:
             touching = touching + 'EE'
         
         if len(touching) == 0:
-            return 'Error: Nie ma styczności'
+            return 0
         elif len(touching) > 2:
-            return 'Error: Za dużo styczności'      
+            return 0
         return touching
 
     # funkcja łączy linie w jedną linię
@@ -82,12 +82,12 @@ class qgis_tools:
         
         # sprawdz czy tym geometrii to linia
         if line1.type() != QgsWkbTypes.LineGeometry or line2.type() != QgsWkbTypes.LineGeometry:
-            return 'Error: nie jest to geometria liniowa'
+            return 0
         
         touching = self.touch_lines(line1, line2, tol)
         
-        if 'Error' in touching:
-            return touching
+        if touching == 0:
+            return 0
         
         if touching == 'SS':
             # obracamy pierwszą linie
@@ -120,15 +120,47 @@ class qgis_tools:
             new_line.insertVertex(line1.vertexAt(i),0)
         return new_line
     
-    # funkcja znajduje najbliższy punkt na linii do punktu
+    # funkcja łączy list linii w jedną linię (lub wiecej linii)
+
+    def merge_more_lines(self, morelines, tol:float):
+        
+        # zliczamy linie w tablicy
+        n = len(morelines)
+        
+        # czy kazda geometria w tablicy to linia
+        
+        for i in range (0, n):
+            if morelines[i].type() != QgsWkbTypes.LineGeometry:
+                return 0
+            
+        i = 0
+        while i < n:
+            j = 0
+            while j < n:
+                if i != j:
+                    retgeom = self.merge_lines(morelines[i], morelines[j], tol)
+                    if retgeom != 0:
+                        morelines[i] = retgeom
+                        del morelines[j]
+                        n = n - 1
+                        i = 0
+                        j = 0
+                        break
+                j = j + 1
+            i = i + 1
+            
+        return morelines
+
+    # funkcja znajduje najbliższy punkt na linii do punktu    
+
     def nearest_point_on_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts :bool ):
             
         # sprawdz czy tym geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
-                return 'Error: nie jest to geometria liniowa'
+                return 0
             # sprawdz czy tym geometrii to punkt
             if point.type() != QgsWkbTypes.PointGeometry:
-                return 'Error: nie jest to geometria punktowa'
+                return 0
 
             if topts:
                 # pobieramy po punkcie z linii
@@ -140,7 +172,7 @@ class qgis_tools:
                             vi = i
                             vl = line.vertexAt(i).distance(point.vertexAt(0))
                 if vl == -1:
-                    return 'Error: nie mozna znalezc punktu zalamania'
+                    return 0
                 return line.vertexAt(vi)
             else:
                 # obliczamy najblizszy punkt na linii (nie punkt zalamania)
@@ -177,9 +209,8 @@ class qgis_tools:
                         # obliczamy punkt na linii
                         x = p1.x() + u*(p2.x()-p1.x())
                         y = p1.y() + u*(p2.y()-p1.y())
-                        # sprawdzamy ile zmiennych ma punkt
+                        # sprawdzamy ile zmiennych ma punkt (2D czy 3D)
                         if p1.is3D():
-                            z = p1.z() + u*(p2.z()-p1.z())
                             pw = QgsGeometry.fromWkt('POINT('+str(x)+' '+str(y)+' 0)')
                         else:
                             pw = QgsGeometry.fromWkt('POINT('+str(x)+' '+str(y)+')')
@@ -189,7 +220,7 @@ class qgis_tools:
                             pdist = pw.vertexAt(0).distance(p3)
                             
                 if pwin == -1:
-                    return 'Error: nie mozna znalezc punktu zalamania'
+                    return 0
                 else:
                     return pwin
 
@@ -199,14 +230,22 @@ class qgis_tools:
 qt = qgis_tools()
 
 geom = QgsGeometry.fromWkt('LINESTRING(0 0 0, 1 1 0 , 2 2 0 , 3 3 0)')
-geom2 = QgsGeometry.fromWkt('LINESTRING(4 4 0, 3 3 0)')
+geom2 = QgsGeometry.fromWkt('LINESTRING(8 4 0, 8 3 0)')
+geom3 = QgsGeometry.fromWkt('LINESTRING(8 3 0, 4 4 0)')
+geom4 = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 0 0 0)')
+
 print ('original geom = ' + geom.asWkt())
 print ('original geom2 = ' + geom2.asWkt())
+    
 print ('reversed geom = '  + qt.reverse_line(geom).asWkt())
 print ('reversed geom2 = '  + qt.reverse_line(geom2).asWkt())
 
-print('geom and geom 2 touches by (buflen = 0.5) = ' + qt.touch_lines(geom,geom2,0.5))
-print('geom and geom merge in (buflen = 0.5) = ' + qt.merge_lines(geom,geom2,0.5).asWkt())
+touching = qt.touch_lines(geom,geom2,0.5)
+if touching == 0:
+    print('geom and geom 2 do not touch')
+else:
+    print('geom and geom 2 touches by (buflen = 0.5) = ' + qt.touch_lines(geom,geom2,0.5))
+    print('geom and geom merge in (buflen = 0.5) = ' + qt.merge_lines(geom,geom2,0.5).asWkt())
 
 point = QgsGeometry.fromWkt('POINT(0.1 0.2 0)')
 print('splitting geom by point = ' + point.asWkt())
@@ -215,7 +254,17 @@ print('nearest point on geom to point = ' + pt1.asWkt())
 pt2 = qt.nearest_point_on_line(geom,point,0.5,True)
 print('nearest point on geom to point = ' + pt2.asWkt())
 
-print(QgsGeometry().isNull())
+geoms = [geom,geom2,geom3,geom4]
+print('geoms = ' + str(len(geoms)))
+for i in range (0, len(geoms)):
+    print('geoms['+str(i)+'] = ' + geoms[i].asWkt())
+
+geoms = qt.merge_more_lines(geoms,0.5)
+
+print('geoms = ' + str(len(geoms)))
+for i in range (0, len(geoms)):
+    print('geoms['+str(i)+'] = ' + geoms[i].asWkt())
+
 
 
 
