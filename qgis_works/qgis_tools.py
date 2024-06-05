@@ -27,7 +27,6 @@ DESCRIPTION
 
 #importujemy bibliotekę qgis
 
-from qgis.core import *
 
 class qgis_tools:
     
