@@ -18,15 +18,28 @@
 
 DESCRIPTION
 
-    Biblioteka do pracy z qgisem, zawiera funkcje do obracania linii, łączenia linii, określania styczności linii
+    Bibliotego powinna dzialac na QgsGeometry 2D i 3D
+
+    Biblioteka do pracy z qgisem, zawiera funkcje do 
+    -obracania linii (punkty nie kąt obrotu), 
+    -łączenia linii, 
+    -dzielenia linii z dociaganiem i bez dociagania punktów na linii,
+    -określania styczności linii
+    
+    TODO:
+    -wspolpraca z QgsLayer i QgsFeature
+    -wyszukiwanie features w warstwie po geometrii, buforze i atrybutach
+    
+    UWAGA:
     Wymaga zainstalowanego qgis w systemie, ścieżek wyszukiwania w vs do bibliotek pythona w qgisie
-    Aktualnie funkcje pracują na qgsgeometry
+    Aktualnie funkcje pracują na qgsgeometry, testowane na QGIS 3.36 i Python 3.12
     
 """
 # qgis_tools.py
 
 #importujemy bibliotekę qgis
 
+from qgis.core import *
 
 class qgis_tools:
     
@@ -152,14 +165,13 @@ class qgis_tools:
 
     # funkcja znajduje najbliższy punkt na linii do punktu    
 
-    def nearest_point_on_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts :bool ):
-            
+    def nearest_point_on_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts :bool ): 
         # sprawdz czy tym geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
-                return 0
+                return 0, -1
             # sprawdz czy tym geometrii to punkt
             if point.type() != QgsWkbTypes.PointGeometry:
-                return 0
+                return 0, -1
 
             if topts:
                 # pobieramy po punkcie z linii
@@ -169,15 +181,17 @@ class qgis_tools:
                     if line.vertexAt(i).distance(point.vertexAt(0)) <= tol:
                         if vl == -1 or (vl > 0 and vl > line.vertexAt(i).distance(point.vertexAt(0))):
                             vi = i
-                            vl = line.vertexAt(i).distance(point.vertexAt(0))
+                            vl = line.vertexAt(i).distance(point.vertexAt(0))      
                 if vl == -1:
-                    return 0
-                return line.vertexAt(vi)
+                    return 0, -1
+                pw = QgsGeometry(line.vertexAt(vi))
+                return pw, vi
             else:
                 # obliczamy najblizszy punkt na linii (nie punkt zalamania)
                 # pobieramy po 2 punkty linii
                 pwin = -1
                 pdist = -1
+                iwin = -1
                 for i in range (0, line.constGet().vertexCount()-1):
                     p1 = line.vertexAt(i)
                     p2 = line.vertexAt(i+1)
@@ -195,14 +209,16 @@ class qgis_tools:
                     if u < 0:
                         if p1.distance(p3) <= tol and (pdist == -1 or pdist > p1.distance(p3)):
                             # typujemy p1
-                            pwin = p1
+                            pwin = QgsGeometry(p1)
                             pdist = p1.distance(p3)
+                            iwin = i
                     #wiekszy niz 1 czyli za wektorem
                     elif u > 1:
                         if p2.distance(p3) <= tol and (pdist == -1 or pdist > p2.distance(p3)):
                             # typujemy p2
-                            pwin = p2
+                            pwin = QgsGeometry(p2)
                             pdist = p2.distance(p3)
+                            iwin = i+1
                     # miedzy punktami wektora
                     else:
                         # obliczamy punkt na linii
@@ -217,52 +233,149 @@ class qgis_tools:
                             # typujemy punkt na linii
                             pwin = pw
                             pdist = pw.vertexAt(0).distance(p3)
+                            iwin = i
                             
                 if pwin == -1:
-                    return 0
+                    return 0,-1
                 else:
-                    return pwin
+                    
+                    return pwin, iwin
 
+
+# podziel linie na dwie linie w punkcie
+
+   
+    def split_line(self, line:QgsGeometry, point:QgsGeometry, tol:float):
             
+            # sprawdz czy tym geometrii to linia
+            if line.type() != QgsWkbTypes.LineGeometry:
+                return 0
+            # sprawdz czy tym geometrii to punkt
+            if point.type() != QgsWkbTypes.PointGeometry:
+                return 0
+            
+            # znajdz punkt na linii
+            pwin, iwin = self.nearest_point_on_line(line, point, tol, False)
+            
+            if pwin == 0:
+                return 0
+            
+            # tworzymy nowe "prawie" puste linie
+            # bo nie da sie dodac punktu na koncu linii, albo do linii ktora jest pusta
+            line1 = QgsGeometry.fromWkt('LINESTRING(0 0 0,  0 0 0)')
+            line2 = QgsGeometry.fromWkt('LINESTRING(0 0 0,  0 0 0)')
+            
+            # tu zabawa zeby nie dublowac nakladajacych sie punktow
+            # lastvalue i newvalue
+            
+            lv = QgsGeometry(QgsPoint())
+            for i in range (0, iwin+1):
+                nv = QgsGeometry(line.vertexAt(i))
+                if lv.equals(nv) == False:
+                    line1.insertVertex(line.vertexAt(i),line1.constGet().vertexCount()-1)
+                    lv = nv
+            nv = QgsGeometry(pwin.vertexAt(0))
+            if lv.equals(nv) == False:
+                line1.insertVertex(pwin.vertexAt(0),line1.constGet().vertexCount()-1)
+                lv = nv
+            
+            # lastvalue powinno byc na pwin
+            line2.insertVertex(pwin.vertexAt(0),line2.constGet().vertexCount()-1)
+            for i in range (iwin+1, line.constGet().vertexCount()):
+                nv = QgsGeometry(line.vertexAt(i))
+                if lv.equals(nv) == False:
+                    line2.insertVertex(line.vertexAt(i),line2.constGet().vertexCount()-1)
+                    lv = nv
+            wynik = []
+            # usuwamy nadmiarowe punkty
+            if line1.constGet().vertexCount() > 3:
+                line1.deleteVertex(0)
+                line1.deleteVertex(line1.constGet().vertexCount()-1)
+                wynik.append(line1)
+            if line2.constGet().vertexCount() > 3:
+                line2.deleteVertex(0)
+                line2.deleteVertex(line2.constGet().vertexCount()-1)                
+                wynik.append(line2)
+            return wynik
+    
 # testy
 
 qt = qgis_tools()
 
-geom = QgsGeometry.fromWkt('LINESTRING(0 0 0, 1 1 0 , 2 2 0 , 3 3 0)')
+geom = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 1 1 0 , 2 2 0 , 3 3 0)')
 geom2 = QgsGeometry.fromWkt('LINESTRING(8 4 0, 8 3 0)')
 geom3 = QgsGeometry.fromWkt('LINESTRING(8 3 0, 4 4 0)')
 geom4 = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 0 0 0)')
+point = QgsGeometry.fromWkt('POINT(1.1 1.1 0)')
 
+print ('\nOryginalne geometrie')
 print ('original geom = ' + geom.asWkt())
 print ('original geom2 = ' + geom2.asWkt())
-    
+print ('original geom3 = ' + geom3.asWkt())
+print ('original geom4 = ' + geom4.asWkt())
+print ('original point = ' + point.asWkt())
+
+print ('\nOdwrócone geometrie')    
 print ('reversed geom = '  + qt.reverse_line(geom).asWkt())
 print ('reversed geom2 = '  + qt.reverse_line(geom2).asWkt())
-
+print ('reversed geom3 = '  + qt.reverse_line(geom3).asWkt())
+print ('reversed geom4 = '  + qt.reverse_line(geom4).asWkt())
+print ('\nCzy linie geom i geom2 się stykają')
 touching = qt.touch_lines(geom,geom2,0.5)
 if touching == 0:
-    print('geom and geom 2 do not touch')
+    print(' - geom i geom2 sie nie stykaja')
 else:
-    print('geom and geom 2 touches by (buflen = 0.5) = ' + qt.touch_lines(geom,geom2,0.5))
-    print('geom and geom merge in (buflen = 0.5) = ' + qt.merge_lines(geom,geom2,0.5).asWkt())
+    print(' - geom i geom2 sie stykaja na (StartStart | StartEnd | EndStart | EndEnd) ' + touching)
 
-point = QgsGeometry.fromWkt('POINT(0.1 0.2 0)')
-print('splitting geom by point = ' + point.asWkt())
-pt1 = qt.nearest_point_on_line(geom,point,0.5,False)
-print('nearest point on geom to point = ' + pt1.asWkt())
-pt2 = qt.nearest_point_on_line(geom,point,0.5,True)
-print('nearest point on geom to point = ' + pt2.asWkt())
+print ('\nCzy linie geom2 i geom3 się stykają')
+touching = qt.touch_lines(geom2,geom3,0.5)
+if touching == 0:
+    print(' - geom2 i geom3 sie nie stykaja')
+else:
+    print(' - geom2 i geom3 sie stykaja na (StartStart | StartEnd | EndStart | EndEnd) ' + touching)
+    
+print ('\nDzielimy geom w punkcie z dociaganiem 0.5 do punktów na linii')
 
-geoms = [geom,geom2,geom3,geom4]
-print('geoms = ' + str(len(geoms)))
-for i in range (0, len(geoms)):
-    print('geoms['+str(i)+'] = ' + geoms[i].asWkt())
+print ('original geom = ' + geom.asWkt())
+print ('original point = ' + point.asWkt())
+pt1, iwin = qt.nearest_point_on_line(geom,point,0.5,True)
+if pt1 != 0:
+    print('najblizszy punkt  = ' + pt1.asWkt())
+    print('index punktu = ' + str(iwin))
 
-geoms = qt.merge_more_lines(geoms,0.5)
+    print('-dzielimy linie na dwie')
+    lines = qt.split_line(geom,pt1,0.5)
+    if lines != 0:
+        for i in range (0, len(lines)):
+            print('lines['+str(i)+'] = ' + lines[i].asWkt())
 
-print('geoms = ' + str(len(geoms)))
-for i in range (0, len(geoms)):
-    print('geoms['+str(i)+'] = ' + geoms[i].asWkt())
+    print('-laczymy linie spowrotem')
+    lines = qt.merge_more_lines(lines,0.5)
+    if lines != 0:
+        for i in range (0, len(lines)):
+            print('lines['+str(i)+'] = ' + lines[i].asWkt())
+    
+print ('\nDzielimy geom w punkcie bez dociagania, z wyjatkiem początku i konca (0.5 do punktów na linii)')
+pt2, iwin2 = qt.nearest_point_on_line(geom,point,0.5,False)
+if pt2 != 0:
+    print('najblizszy punkt  = ' + pt2.asWkt())
+    print('index punktu = ' + str(iwin2))
+    
+    print('-dzielimy linie na dwie')
+    lines = qt.split_line(geom,pt2,0.5)
+    if lines != 0:
+        for i in range (0, len(lines)):
+            print('lines['+str(i)+'] = ' + lines[i].asWkt())
+    print('-laczymy linie spowrotem')
+    lines = qt.merge_more_lines(lines,0.5)
+    if lines != 0:
+        for i in range (0, len(lines)):
+            print('lines['+str(i)+'] = ' + lines[i].asWkt())
+    
+            
+
+
+
 
 
 
