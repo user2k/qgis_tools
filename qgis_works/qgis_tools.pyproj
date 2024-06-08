@@ -5,8 +5,8 @@
     <ProjectGuid>72639ebe-2567-4d32-a7fe-158660e33ddc</ProjectGuid>
     <ProjectHome>
     </ProjectHome>
-    <StartupFile>qgis_tools.py</StartupFile>
-    <SearchPath>..\..\..\..\..\..\qgis3362\apps\Python312;..\..\..\..\..\..\qgis3362\apps\qgis\python</SearchPath>
+    <StartupFile>tests.py</StartupFile>
+    <SearchPath>..\..\..\..\..\..\qgis3362\apps\qgis\python</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>qgis_tools</Name>
@@ -23,9 +23,32 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="qgis_tools.py" />
+    <Compile Include="tests.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|VisualStudio|Python312" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="prj\" />
+    <Folder Include="prj\data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="prj\data\woda_odcinki.cpg" />
+    <Content Include="prj\data\woda_odcinki.dbf" />
+    <Content Include="prj\data\woda_odcinki.prj" />
+    <Content Include="prj\data\woda_odcinki.shp" />
+    <Content Include="prj\data\woda_odcinki.shx" />
+    <Content Include="prj\data\wod_inne_wezly.cpg" />
+    <Content Include="prj\data\wod_inne_wezly.dbf" />
+    <Content Include="prj\data\wod_inne_wezly.prj" />
+    <Content Include="prj\data\wod_inne_wezly.shp" />
+    <Content Include="prj\data\wod_inne_wezly.shx" />
+    <Content Include="prj\data\wod_zasuwy.cpg" />
+    <Content Include="prj\data\wod_zasuwy.dbf" />
+    <Content Include="prj\data\wod_zasuwy.prj" />
+    <Content Include="prj\data\wod_zasuwy.shp" />
+    <Content Include="prj\data\wod_zasuwy.shx" />
+    <Content Include="prj\test_project.qgz" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

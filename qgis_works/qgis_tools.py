@@ -25,8 +25,6 @@ DESCRIPTION
     -łączenia linii, 
     -dzielenia linii z dociaganiem i bez dociagania punktów na linii,
     -określania styczności linii
-    
-    TODO:
     -wspolpraca z QgsLayer i QgsFeature
     -wyszukiwanie features w warstwie po geometrii, buforze i atrybutach
     
@@ -40,6 +38,14 @@ DESCRIPTION
 #importujemy bibliotekę qgis
 
 from qgis.core import *
+from qgis.gui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from qgis.core import QgsApplication
+
+
+import sys
 
 class qgis_tools:
     
@@ -298,80 +304,83 @@ class qgis_tools:
                 wynik.append(line2)
             return wynik
     
-# testy
+    def qgis_find_features_on_layer(self, layer:QgsVectorLayer, geom:QgsGeometry, buffer:float):
 
-qt = qgis_tools()
+        # robimy buffer wokół geometrii
+        if buffer == 0:
+            buffer = geom
+        else:
+            buffer = geom.buffer(buffer,5)
+            
+        # robimy rectangle z buffer
+        rect = buffer.boundingBox()
+        # pobieramy features z warstwy w prostokącie
+        request = QgsFeatureRequest().setFilterRect(rect)
+        features = layer.getFeatures(request)
+        selection = []
+        
+        for feature in features:
+            if buffer.contains(feature.geometry()):
+                selection.append(feature)
+        return selection
 
-geom = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 1 1 0 , 2 2 0 , 3 3 0)')
-geom2 = QgsGeometry.fromWkt('LINESTRING(8 4 0, 8 3 0)')
-geom3 = QgsGeometry.fromWkt('LINESTRING(8 3 0, 4 4 0)')
-geom4 = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 0 0 0)')
-point = QgsGeometry.fromWkt('POINT(1.1 1.1 0)')
-
-print ('\nOryginalne geometrie')
-print ('original geom = ' + geom.asWkt())
-print ('original geom2 = ' + geom2.asWkt())
-print ('original geom3 = ' + geom3.asWkt())
-print ('original geom4 = ' + geom4.asWkt())
-print ('original point = ' + point.asWkt())
-
-print ('\nOdwrócone geometrie')    
-print ('reversed geom = '  + qt.reverse_line(geom).asWkt())
-print ('reversed geom2 = '  + qt.reverse_line(geom2).asWkt())
-print ('reversed geom3 = '  + qt.reverse_line(geom3).asWkt())
-print ('reversed geom4 = '  + qt.reverse_line(geom4).asWkt())
-print ('\nCzy linie geom i geom2 się stykają')
-touching = qt.touch_lines(geom,geom2,0.5)
-if touching == 0:
-    print(' - geom i geom2 sie nie stykaja')
-else:
-    print(' - geom i geom2 sie stykaja na (StartStart | StartEnd | EndStart | EndEnd) ' + touching)
-
-print ('\nCzy linie geom2 i geom3 się stykają')
-touching = qt.touch_lines(geom2,geom3,0.5)
-if touching == 0:
-    print(' - geom2 i geom3 sie nie stykaja')
-else:
-    print(' - geom2 i geom3 sie stykaja na (StartStart | StartEnd | EndStart | EndEnd) ' + touching)
+    def qgis_find_features_on_layer_by_query(self, layer:QgsVectorLayer, query:str):
+        # ustawiamy filtr na warstwie
+        features = layer.getFeatures(QgsFeatureRequest().setFilterExpression(query))
+        selection = []
+        for feature in features:
+            selection.append(feature)
+        return selection
     
-print ('\nDzielimy geom w punkcie z dociaganiem 0.5 do punktów na linii')
-
-print ('original geom = ' + geom.asWkt())
-print ('original point = ' + point.asWkt())
-pt1, iwin = qt.nearest_point_on_line(geom,point,0.5,True)
-if pt1 != 0:
-    print('najblizszy punkt  = ' + pt1.asWkt())
-    print('index punktu = ' + str(iwin))
-
-    print('-dzielimy linie na dwie')
-    lines = qt.split_line(geom,pt1,0.5)
-    if lines != 0:
-        for i in range (0, len(lines)):
-            print('lines['+str(i)+'] = ' + lines[i].asWkt())
-
-    print('-laczymy linie spowrotem')
-    lines = qt.merge_more_lines(lines,0.5)
-    if lines != 0:
-        for i in range (0, len(lines)):
-            print('lines['+str(i)+'] = ' + lines[i].asWkt())
+    def qgis_update_features_attribute(self, layer:QgsVectorLayer, features, attribute:str, value):
+        # jak nie mozna edytowac warstwy to koniec
+        if not layer.isEditable():
+            return 1
+        layer.startEditing()
+        for feature in features:
+            feature.setAttribute(attribute, value)
+            layer.updateFeature(feature)
+        layer.commitChanges()
+        return 0
     
-print ('\nDzielimy geom w punkcie bez dociagania, z wyjatkiem początku i konca (0.5 do punktów na linii)')
-pt2, iwin2 = qt.nearest_point_on_line(geom,point,0.5,False)
-if pt2 != 0:
-    print('najblizszy punkt  = ' + pt2.asWkt())
-    print('index punktu = ' + str(iwin2))
+    def qgis_update_features_attributes(self, layer:QgsVectorLayer, features, attributes):
+        # jak nie mozna edytowac warstwy to koniec
+        if not layer.isEditable():
+            return 1
+        layer.startEditing()
+        for feature in features:
+            for key, value in attributes.items():
+                feature.setAttribute(key, value)
+            layer.updateFeature(feature)
+        layer.commitChanges()
+        return 0
     
-    print('-dzielimy linie na dwie')
-    lines = qt.split_line(geom,pt2,0.5)
-    if lines != 0:
-        for i in range (0, len(lines)):
-            print('lines['+str(i)+'] = ' + lines[i].asWkt())
-    print('-laczymy linie spowrotem')
-    lines = qt.merge_more_lines(lines,0.5)
-    if lines != 0:
-        for i in range (0, len(lines)):
-            print('lines['+str(i)+'] = ' + lines[i].asWkt())
+    def qgis_copy_feature(self, layer:QgsVectorLayer, feature:QgsFeature, attributes):
+        # jak nie mozna edytowac warstwy to koniec
+        if not layer.isEditable():
+            return 1
+        layer.startEditing()
+        new_feature = QgsFeature()
+        new_feature.setGeometry(feature.geometry())
+        for key, value in attributes.items():
+            new_feature.setAttribute(key, value)
+        layer.addFeature(new_feature)
+        layer.commitChanges()
+        return 0
     
+    def qgis_execute_sql_command(self, layer:QgsVectorLayer, sql:str):
+        # jak nie mozna edytowac warstwy to koniec
+        if not layer.isEditable():
+            return 1
+        layer.startEditing()
+        layer.dataProvider().executeSql(sql)
+        layer.commitChanges()
+        return 0
+    
+    
+
+        
+
             
 
 
