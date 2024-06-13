@@ -18,7 +18,7 @@
 
 DESCRIPTION
 
-    Bibliotego powinna dzialac na QgsGeometry 2D i 3D
+    Biblioteka powinna dzialac na QgsGeometry 2D i 3D
 
     Biblioteka do pracy z qgisem, zawiera funkcje do 
     -obracania linii (punkty nie kąt obrotu), 
@@ -305,7 +305,11 @@ class qgis_tools:
             return wynik
     
     def qgis_find_features_on_layer(self, layer:QgsVectorLayer, geom:QgsGeometry, buffer:float):
-
+        # sprawdzmy czy geometria nie jest albo NULL albo unknown
+        
+        if geom.isNull() or geom.type() == QgsWkbTypes.Unknown:
+            return []
+        
         # robimy buffer wokół geometrii
         if buffer == 0:
             buffer = geom
@@ -320,7 +324,7 @@ class qgis_tools:
         selection = []
         
         for feature in features:
-            if buffer.contains(feature.geometry()):
+            if buffer.intersects(feature.geometry()):
                 selection.append(feature)
         return selection
 

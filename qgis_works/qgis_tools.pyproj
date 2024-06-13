@@ -12,6 +12,7 @@
     <Name>qgis_tools</Name>
     <RootNamespace>qgis_works</RootNamespace>
     <InterpreterId>Global|VisualStudio|Python312</InterpreterId>
+    <SuppressConfigureTestFrameworkPrompt>true</SuppressConfigureTestFrameworkPrompt>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
