@@ -61,7 +61,7 @@ class qgis_tools:
 
     def reverse_line(self, line:QgsGeometry):
         
-        # sprawdz czy tym geometrii to linia
+        # sprawdz czy typ geometrii to linia
         if line.type() != QgsWkbTypes.LineGeometry:
             return 0
         # tworzymy nową geometrię typu linia
@@ -75,7 +75,7 @@ class qgis_tools:
    
     def touch_lines(self, line1:QgsGeometry, line2:QgsGeometry, tol:float):
         
-        # sprawdz czy tym geometrii to linia
+        # sprawdz czy typ geometrii to linia
         touching = ''
         if line1.type() != QgsWkbTypes.LineGeometry or line2.type() != QgsWkbTypes.LineGeometry:
             return 0
@@ -98,7 +98,7 @@ class qgis_tools:
     # funkcja łączy linie w jedną linię
     def merge_lines(self, line1:QgsGeometry, line2:QgsGeometry, tol:float):
         
-        # sprawdz czy tym geometrii to linia
+        # sprawdz czy typ geometrii to linia
         if line1.type() != QgsWkbTypes.LineGeometry or line2.type() != QgsWkbTypes.LineGeometry:
             return 0
         
@@ -172,10 +172,10 @@ class qgis_tools:
     # funkcja znajduje najbliższy punkt na linii do punktu    
 
     def nearest_point_on_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts :bool ): 
-        # sprawdz czy tym geometrii to linia
+        # sprawdz czy typ geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
                 return 0, -1
-            # sprawdz czy tym geometrii to punkt
+            # sprawdz czy typ geometrii to punkt
             if point.type() != QgsWkbTypes.PointGeometry:
                 return 0, -1
 
@@ -253,10 +253,10 @@ class qgis_tools:
    
     def split_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts:bool = False):
             
-            # sprawdz czy tym geometrii to linia
+            # sprawdz czy typ geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
                 return 0
-            # sprawdz czy tym geometrii to punkt
+            # sprawdz czy typ geometrii to punkt
             if point.type() != QgsWkbTypes.PointGeometry:
                 return 0
             
@@ -307,10 +307,10 @@ class qgis_tools:
 
     # dociagnij linie do punktu (poczatek lub koniec)
     def snap_line_to_point(self, line:QgsGeometry, point:QgsGeometry, tol:float):
-        # sprawdz czy tym geometrii to linia
+        # sprawdz czy typ geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
                 return 0
-            # sprawdz czy tym geometrii to punkt
+            # sprawdz czy typ geometrii to punkt
             if point.type() != QgsWkbTypes.PointGeometry:
                 return 0
             
