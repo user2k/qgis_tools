@@ -251,7 +251,7 @@ class qgis_tools:
 # podziel linie na dwie linie w punkcie
 
    
-    def split_line(self, line:QgsGeometry, point:QgsGeometry, tol:float):
+    def split_line(self, line:QgsGeometry, point:QgsGeometry, tol:float, topts:bool = False):
             
             # sprawdz czy tym geometrii to linia
             if line.type() != QgsWkbTypes.LineGeometry:
@@ -261,7 +261,7 @@ class qgis_tools:
                 return 0
             
             # znajdz punkt na linii
-            pwin, iwin = self.nearest_point_on_line(line, point, tol, False)
+            pwin, iwin = self.nearest_point_on_line(line, point, tol, topts)
             
             if pwin == 0:
                 return 0
@@ -304,6 +304,32 @@ class qgis_tools:
                 wynik.append(line2)
             return wynik
     
+
+    # dociagnij linie do punktu (poczatek lub koniec)
+    def snap_line_to_point(self, line:QgsGeometry, point:QgsGeometry, tol:float):
+        # sprawdz czy tym geometrii to linia
+            if line.type() != QgsWkbTypes.LineGeometry:
+                return 0
+            # sprawdz czy tym geometrii to punkt
+            if point.type() != QgsWkbTypes.PointGeometry:
+                return 0
+            
+            line_new = QgsGeometry(line)
+
+            # obliczamy dist do punktu
+            dist1 = line.vertexAt(0).distance(point.vertexAt(0))
+            dist2 = line.vertexAt(line.constGet().vertexCount()-1).distance(point.vertexAt(0))
+            
+            # dociagamy do punktu
+            if dist1 <= tol:
+                line_new.moveVertex(point.vertexAt(0),0)
+            elif dist2 <= tol:
+                line_new.moveVertex(point.vertexAt(0),line.constGet().vertexCount()-1)
+            else:
+                return 0
+            return line_new
+    
+
     def qgis_find_features_on_layer(self, layer:QgsVectorLayer, geom:QgsGeometry, buffer:float):
         # sprawdzmy czy geometria nie jest albo NULL albo unknown
         

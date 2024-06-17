@@ -42,7 +42,9 @@ def test_geometry_tools():
     geom2 = QgsGeometry.fromWkt('LINESTRING(8 4 0, 8 3 0)')
     geom3 = QgsGeometry.fromWkt('LINESTRING(8 3 0, 4 4 0)')
     geom4 = QgsGeometry.fromWkt('LINESTRING(-1 -1 0, 0 0 0)')
-    point = QgsGeometry.fromWkt('POINT(1.1 1.1 0)')
+    point = QgsGeometry.fromWkt('POINT(3.5 3.5 0)')
+
+    geom5 = qt.snap_line_to_point(geom,point,0.5)
 
     print ('\nOryginalne geometrie')
     print ('original geom = ' + geom.asWkt())
@@ -50,6 +52,9 @@ def test_geometry_tools():
     print ('original geom3 = ' + geom3.asWkt())
     print ('original geom4 = ' + geom4.asWkt())
     print ('original point = ' + point.asWkt())
+    
+    print( '\nDociągniecie linii geom do punktu point')
+    print ('snapped geom = ' + geom5.asWkt())   
 
     print ('\nOdwrócone geometrie')    
     print ('reversed geom = '  + qt.reverse_line(geom).asWkt())
